@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sudoku Solver</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            transition: 0.3s;
+        }
+
+        body.light {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        body.dark {
+            background: #121212;
+            color: white;
+        }
+
+        h2 { margin-bottom: 10px; }
+
+        .container {
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        body.light .container { background: white; }
+        body.dark .container { background: #1e1e1e; }
+
+        table {
+            border-collapse: collapse;
+            margin: auto;
+        }
+
+        td {
+            border: 1px solid #999;
+        }
+
+        input {
+            width: 45px;
+            height: 45px;
+            text-align: center;
+            font-size: 18px;
+            border: none;
+            outline: none;
+        }
+
+        body.light input {
+            background: #f9f9f9;
+            color: black;
+        }
+
+        body.dark input {
+            background: #2a2a2a;
+            color: white;
+        }
+
+        input:focus {
+            background: #a5b4fc;
+        }
+
+        /* Bold 3x3 */
+        tr:nth-child(3n) td { border-bottom: 2px solid black; }
+        td:nth-child(3n) { border-right: 2px solid black; }
+        tr:nth-child(1) td { border-top: 2px solid black; }
+        td:nth-child(1) { border-left: 2px solid black; }
+
+        .buttons {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .solve { background: #4CAF50; color: white; }
+        .clear { background: #f44336; color: white; }
+        .mode { background: #333; color: white; }
+
+    </style>
+</head>
+
+<body class="light">
+
+<h2>🧩 Sudoku Solver</h2>
+
+<div class="container">
+    <table id="grid"></table>
+
+    <div class="buttons">
+        <button class="solve" onclick="solve()">Solve</button>
+        <button class="clear" onclick="clearGrid()">Clear</button>
+        <button class="mode" onclick="toggleMode()">🌙 Mode</button>
+    </div>
+</div>
+
+<script>
+let table = document.getElementById("grid");
+
+// Create Grid
+for (let i = 0; i < 9; i++) {
+    let row = table.insertRow();
+
+    for (let j = 0; j < 9; j++) {
+        let cell = row.insertCell();
+        let input = document.createElement("input");
+
+        input.maxLength = 1;
+
+        // Input logic
+        input.oninput = () => {
+            input.value = input.value.replace(/[^0-9]/g, '');
+
+            if (input.value.length > 1) {
+                input.value = input.value[0];
+            }
+
+            if (input.value !== "") moveNext(i, j);
+        };
+
+        // Keyboard navigation
+        input.onkeydown = (e) => {
+            if (e.key === "Backspace" && input.value === "") {
+                movePrev(i, j);
+            }
+
+            if (e.key === "ArrowRight") moveNext(i, j);
+            if (e.key === "ArrowLeft") movePrev(i, j);
+            if (e.key === "ArrowDown" && i < 8)
+                table.rows[i+1].cells[j].firstChild.focus();
+            if (e.key === "ArrowUp" && i > 0)
+                table.rows[i-1].cells[j].firstChild.focus();
+        };
+
+        cell.appendChild(input);
+    }
+}
+
+// Move Next
+function moveNext(i, j) {
+    if (j < 8) table.rows[i].cells[j+1].firstChild.focus();
+    else if (i < 8) table.rows[i+1].cells[0].firstChild.focus();
+}
+
+// Move Previous
+function movePrev(i, j) {
+    if (j > 0) table.rows[i].cells[j-1].firstChild.focus();
+    else if (i > 0) table.rows[i-1].cells[8].firstChild.focus();
+}
+
+// Solve
+function solve() {
+    let grid = [];
+
+    for (let i = 0; i < 9; i++) {
+        let row = [];
+        for (let j = 0; j < 9; j++) {
+            let val = table.rows[i].cells[j].firstChild.value;
+            row.push(val ? val : "0");
+        }
+        grid.push(row);
+    }
+
+    fetch("/solve", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({grid: grid})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.solution) {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    table.rows[i].cells[j].firstChild.value = data.solution[i][j];
+                }
+            }
+        } else {
+            alert("No solution found");
+        }
+    });
+}
+
+// Clear
+function clearGrid() {
+    document.querySelectorAll("input").forEach(input => input.value = "");
+}
+
+// Mode Toggle
+function toggleMode() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+}
+</script>
+
+</body>
+</html>
